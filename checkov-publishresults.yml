@@ -1,0 +1,47 @@
+# Checkov Deploy
+# Besart Sulejmani
+
+# Created 18-04-2021
+# https://aka.ms/yaml
+
+name: Checkov Deploy
+
+# Automatically trigger pipeline by pushing code to master branch
+trigger: 
+  branches:
+    include:
+      - master
+
+# Variable used in docker run command
+variables:
+- name:  terraform_folder
+  value: $(System.DefaultWorkingDirectory)/Terraform
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages :
+- stage: SecurityCheck
+  displayName: Security & Quality Check
+  jobs:
+    - job: Checkov_analysis
+      displayName: Run Checkov
+      steps:
+        - script: |
+              mkdir CheckovReport
+              docker pull bridgecrew/checkov
+              docker run --volume $(terraform_folder):/tf bridgecrew/checkov --directory /tf --compact --output junitxml > $(System.DefaultWorkingDirectory)/CheckovReport/Checkov-Report.xml
+          displayName: Run Static Code analysis for Terraform using Checkov in a Docker container
+
+        # Publish results of Checkov analysis as Test results to the pipeline
+        - task: PublishTestResults@2
+          displayName: Publish Checkov Test Results
+          condition: succeededOrFailed()
+          inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/*Checkov-Report.xml'
+              searchFolder: '$(System.DefaultWorkingDirectory)/CheckovReport'
+              mergeTestResults: false
+              testRunTitle: Checkov Scan
+              failTaskOnFailedTests: false
+              publishRunAttachments: true
