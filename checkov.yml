@@ -28,5 +28,5 @@ stages :
       displayName: Run Checkov
       steps:
         - script: |
-              docker run --volume $(terraform_folder):/tf bridgecrew/checkov --directory /tf --compact
+              docker run --tty --volume $(terraform_folder):/tf bridgecrew/checkov --directory /tf --compact
           displayName: Run Static Code analysis for Terraform using Checkov in a Docker container
